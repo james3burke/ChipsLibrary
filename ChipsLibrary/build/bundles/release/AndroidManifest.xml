@@ -1,5 +1,0 @@
-<!-- From: file:/home/mike/Documents/Lift/lift-android/libraries/chips/ChipsLibrary/AndroidManifest.xml --><manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="1" package="com.android.ex.chips">
-
-	<uses-sdk android:minSdkVersion="8" android:targetSdkVersion="19"/>
-
-</manifest>

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <!-- From: file:/home/mike/Documents/Lift/lift-android/libraries/chips/ChipsLibrary/res/values-land/dimen.xml -->
-    <eat-comment />
-
-    <dimen name="chip_height">26dip</dimen>
-
-</resources>
