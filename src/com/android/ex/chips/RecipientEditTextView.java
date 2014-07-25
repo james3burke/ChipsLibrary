@@ -41,6 +41,7 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -63,6 +64,7 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.method.QwertyKeyListener;
+import android.text.style.ForegroundColorSpan;
 import android.text.style.ImageSpan;
 import android.text.util.Rfc822Token;
 import android.text.util.Rfc822Tokenizer;
@@ -2480,9 +2482,14 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
     // ///////////////////////
     private class RecipientTextWatcher implements TextWatcher
     {
+        private int mStart, mAfter, mCount;
+
         @Override
         public void afterTextChanged(final Editable s)
         {
+
+            keepPermanentHint(mHint,s);
+
             // If the text has been set to null or empty, make sure we remove
             // all the spans we applied.
             if(TextUtils.isEmpty(s))
@@ -2537,6 +2544,52 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
                             commitByCharacter();
                     }
             }
+
+
+        }
+
+        private void keepPermanentHint(String hint, Editable e) {
+
+            // If the user tries to go into our hint
+            if (mStart < hint.length()) {
+
+                // Check to see if the hint is still ok
+                if (e.toString().startsWith(hint)) {
+                    return;
+
+                    // If first chip is created it clears the edit text. Simply put the hint back in
+                } else if (e.toString().equals("")) {
+                    setText(mHint);
+                    return;
+
+                    // If the user is backspacing in our hint
+                } else if (mCount >= 1 && mAfter == 0) {
+
+                    // If deleting somewhere in the hint. Ex: T|o
+                    if (mStart + mCount +1 <= hint.length()) {
+                        e.replace(mStart, mStart + mCount, hint.substring(mStart, mStart + mCount + 1));
+
+                        // If backspacing from the end of the hint. Ex: To|
+                    } else {
+                        e.replace(mStart, mStart, hint.substring(mStart, mStart+1));
+                    }
+
+                    // If the user is typing in our hint then we delete everything they typed
+                } else if (mCount == 0 && mAfter >= 1) {
+                    e.delete(mStart, mStart + mAfter);
+                }
+
+                // Keep hint color
+                int color = getResources().getColor(R.color.dark_grey);
+                e.setSpan(new ForegroundColorSpan(color), 0, hint.length()-1, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
+
+                // Handles the backspace when
+                setSelection(hint.length(), hint.length());
+
+                // Change the text color to normal since user is typing past the hint
+            } else {
+                e.setSpan(new ForegroundColorSpan(Color.BLACK), mStart, mStart + mAfter, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
+            }
         }
 
         @Override
@@ -2589,6 +2642,9 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             // final DrawableRecipientChip[] chips = getSpannable().getSpans(0, getText().length(),
             // DrawableRecipientChip.class);
             // previousChipsCount = chips.length;
+            mStart = start;
+            mCount = count;
+            mAfter = after;
         }
     }
 
