@@ -358,7 +358,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
     @Override
     public void onSelectionChanged(int start,int end)
     {
-        Log.d(TAG,getText().toString());
+
         if (getHint() != null) {
 
             if (TextUtils.isEmpty(getText())) {
@@ -1692,14 +1692,12 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
         clearComposingText();
         final int end=getSelectionEnd();
         int start;
-        if (getHint() == null) {
-            start = mTokenizer.findTokenStart(getText(), end);
+        if (getHint() != null && position == 0) {
+            start = getHint().length();
         } else {
-            int hintLength = getHint().length();
-            String text = getText().toString();
-            String sub = getText().subSequence(hintLength, text.length()).toString();
-            start = sub.length();
+            start = mTokenizer.findTokenStart(getText(), end);
         }
+
 
         final Editable editable=getText();
         QwertyKeyListener.markAsReplaced(editable,start,end,"");

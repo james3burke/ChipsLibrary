@@ -863,7 +863,6 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
 
     private Cursor doQuery(final CharSequence constraint,final int limit,final Long directoryId)
     {
-        //String constraintStr= constraint.subSequence(mHintLength,constraint.length()).toString();
         String constraintStr = constraint.toString();
         if (!TextUtils.isEmpty(mHint) && constraint.length() >= mHint.length()) {
             if (constraint.subSequence(0,mHint.length()).equals(mHint)) {
