@@ -11,7 +11,7 @@ For example *include ':libraries:chips'*
 
 - Added permanent hint support. Use the setHint("hint") method on the RecipientEditTextView to have it remain there and chips/text will be placed after it. Note, must remove one of the focus change options.
 `view.setHint("Hint");`
-`view.setFocusBehavior(EnumSet.of(EXPAND_WHEN_GOT_FOCUS));`
+
 
 
 
