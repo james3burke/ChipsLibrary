@@ -529,7 +529,13 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
                     start = getHint().length();
                 }
                 final DrawableRecipientChip[] chips=getSpannable().getSpans(start,end,DrawableRecipientChip.class);
-                if(chips==null||chips.length==0 && !mHint.equals(getText().toString()))
+
+                if (!TextUtils.isEmpty(getHint())) {
+                    if (getHint().equals(getText().toString())) {
+                        return;
+                    }
+                }
+                if(chips==null||chips.length==0)
                 {
                     final Editable text=getText();
                     int whatEnd=mTokenizer.findTokenEnd(text,start);
@@ -1255,7 +1261,10 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             DrawableRecipientChip beforeLast=null;
             if(recips.length>1)
                 beforeLast=recips[recips.length-2];
-            int startLooking=getHint().length();
+            int startLooking = 0;
+            if (!TextUtils.isEmpty(getHint())) {
+                startLooking = getHint().length();
+            }
             final int end=getSpannable().getSpanStart(last);
             if(beforeLast!=null)
             {
@@ -2503,7 +2512,9 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
         public void afterTextChanged(final Editable s)
         {
 
-            keepPermanentHint(mHint,s);
+            if (!TextUtils.isEmpty(getHint())) {
+                keepPermanentHint(mHint, s);
+            }
 
             // If the text has been set to null or empty, make sure we remove
             // all the spans we applied.
