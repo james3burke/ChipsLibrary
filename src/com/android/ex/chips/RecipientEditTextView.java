@@ -516,13 +516,20 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             // when the field lost focus.
             if(mPendingChipsCount>0)
                 postHandlePendingChips();
+
+
             else
             {
                 final Editable editable=getText();
                 final int end=getSelectionEnd();
-                final int start=mTokenizer.findTokenStart(editable,end);
+                int start;
+                if (TextUtils.isEmpty(getHint())) {
+                    start = mTokenizer.findTokenStart(editable, end);
+                } else {
+                    start = getHint().length();
+                }
                 final DrawableRecipientChip[] chips=getSpannable().getSpans(start,end,DrawableRecipientChip.class);
-                if(chips==null||chips.length==0)
+                if(chips==null||chips.length==0 && !mHint.equals(getText().toString()))
                 {
                     final Editable text=getText();
                     int whatEnd=mTokenizer.findTokenEnd(text,start);
@@ -1152,7 +1159,15 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             return false;
         final Editable editable=getText();
         final int end=getSelectionEnd();
-        final int start=mTokenizer.findTokenStart(editable,end);
+        int start;
+        if (getHint() == null) {
+            start = mTokenizer.findTokenStart(editable, end);
+        } else {
+            int hintLength = getHint().length();
+            String text = getText().toString();
+            String sub = getText().subSequence(hintLength, text.length()).toString();
+            start = sub.length();
+        }
         if(shouldCreateChip(start,end))
         {
             int whatEnd=mTokenizer.findTokenEnd(getText(),start);
