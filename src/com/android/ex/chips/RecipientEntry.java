@@ -15,6 +15,8 @@
  */
 package com.android.ex.chips;
 import android.net.Uri;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.provider.ContactsContract.CommonDataKinds.Email;
 import android.provider.ContactsContract.DisplayNameSources;
 import android.text.util.Rfc822Token;
@@ -23,7 +25,7 @@ import android.text.util.Rfc822Tokenizer;
 /**
  * Represents one entry inside recipient auto-complete list.
  */
-public class RecipientEntry
+public class RecipientEntry implements Parcelable
 {
 /* package */static final int INVALID_CONTACT          =-1;
 /**
@@ -54,7 +56,7 @@ private final String          mDestinationLabel;
 private final long            mContactId;
 /** ID for the destination */
 private final long            mDataId;
-private final boolean         mIsDivider;
+private  boolean         mIsDivider;
 private final Uri             mPhotoThumbnailUri;
 private final boolean         mIsValid;
 /**
@@ -236,4 +238,53 @@ public String toString()
   {
   return mDisplayName+" <"+mDestination+">, isValid="+mIsValid;
   }
+
+
+@Override
+public int describeContents() {
+    return 0;
+}
+
+@Override
+public void writeToParcel(Parcel out, int i) {
+    out.writeInt(mEntryType);
+    out.writeString(mDisplayName);
+    out.writeString(mDestination);
+    out.writeInt(mDestinationType);
+    out.writeString(mDestinationLabel);
+    out.writeLong(mContactId);
+    out.writeLong(mDataId);
+    if (mPhotoThumbnailUri != null) {
+        out.writeString(mPhotoThumbnailUri.toString());
+    } else {
+        out.writeString("");
+    }
+    out.writeInt(mIsFirstLevel ? 1 : 0);
+    out.writeInt(mIsValid ? 1 : 0);
+    out.writeInt(mIsGalContact ? 1 : 0);
+}
+
+public static final Creator<RecipientEntry> CREATOR = new Creator<RecipientEntry>() {
+    public RecipientEntry createFromParcel(Parcel in) {
+        return new RecipientEntry(in);
+    }
+
+    public RecipientEntry[] newArray(int size) {
+        return new RecipientEntry[size];
+    }
+};
+
+private RecipientEntry(Parcel in) {
+    mEntryType = in.readInt();
+    mDisplayName = in.readString();
+    mDestination = in.readString();
+    mDestinationType = in.readInt();
+    mDestinationLabel = in.readString();
+    mContactId = in.readLong();
+    mDataId = in.readLong();
+    mPhotoThumbnailUri = Uri.parse(in.readString());
+    mIsFirstLevel = (in.readInt() == 1) ? true : false;
+    mIsValid = (in.readInt() == 1) ? true : false;
+    mIsGalContact = (in.readInt() == 1) ? true : false;
+}
 }

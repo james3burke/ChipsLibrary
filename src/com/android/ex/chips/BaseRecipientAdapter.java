@@ -90,8 +90,6 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
     private final Queries.Query  mQuery;
     private final int            mQueryType;
 
-    // Used if the edittext contains permanent text, such as a hint
-    private String mHint;
     /**
      * Model object for a {@link Directory} row.
      */
@@ -480,11 +478,6 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
         this(context,DEFAULT_PREFERRED_MAX_RESULT_COUNT,QUERY_TYPE_EMAIL);
     }
 
-    public BaseRecipientAdapter(final int queryMode, final Context context, final String hint) {
-        this(context, DEFAULT_PREFERRED_MAX_RESULT_COUNT, queryMode);
-        mHint = hint;
-    }
-
     public BaseRecipientAdapter(final Context context,final int preferredMaxResultCount)
     {
         this(context,preferredMaxResultCount,QUERY_TYPE_EMAIL);
@@ -863,12 +856,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
 
     private Cursor doQuery(final CharSequence constraint,final int limit,final Long directoryId)
     {
-        String constraintStr = constraint.toString();
-        if (!TextUtils.isEmpty(mHint) && constraint.length() >= mHint.length()) {
-            if (constraint.subSequence(0,mHint.length()).equals(mHint)) {
-                constraintStr = constraint.subSequence(mHint.length(), constraint.length()).toString();
-            }
-        }
+        String constraintStr=constraint.toString();
         final Uri.Builder builder;
         String selection=null;
         String[] selectionArgs=null;

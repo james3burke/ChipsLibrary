@@ -41,7 +41,6 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -64,7 +63,6 @@ import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.method.QwertyKeyListener;
-import android.text.style.ForegroundColorSpan;
 import android.text.style.ImageSpan;
 import android.text.util.Rfc822Token;
 import android.text.util.Rfc822Tokenizer;
@@ -147,7 +145,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
     // VisibleForTesting
     private final ArrayList<String>          mPendingChips                        =new ArrayList<String>();
     private final Handler                    mHandler;
-    public int                              mPendingChipsCount                   =0;
+    private int                              mPendingChipsCount                   =0;
     private boolean                          mNoChips                             =false;
     private ListPopupWindow                  mAlternatesPopup,mAddressPopup;
     // VisibleForTesting
@@ -182,16 +180,6 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
     /** used to store initial touch Y coordinate, in order to identify scrolling */
     private int                              mStartTouchY                         =-1;
     private boolean                          mIsScrolling                         =false;
-
-    private String mHint;
-
-    public String getHint() {
-        return mHint;
-    }
-
-    public void setHint(String mHint) {
-        this.mHint = mHint;
-    }
 
     public enum FocusBehavior
     {
@@ -356,23 +344,8 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
     }
 
     @Override
-    public void onSelectionChanged(int start,int end)
+    public void onSelectionChanged(final int start,final int end)
     {
-
-        if (getHint() != null) {
-
-            if (TextUtils.isEmpty(getText())) {
-                setText(getHint());
-            }
-            int hintLength = getHint().length();
-            if (start < hintLength) {
-                start = hintLength;
-            }
-            if (end < hintLength) {
-                end = hintLength;
-            }
-            setSelection(start, end);
-        }
         // When selection changes, see if it is inside the chips area.
         // If so, move the cursor back after the chips again.
         final DrawableRecipientChip last=getLastChip();
@@ -516,28 +489,17 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             // when the field lost focus.
             if(mPendingChipsCount>0)
                 postHandlePendingChips();
-
-
             else
             {
                 final Editable editable=getText();
                 final int end=getSelectionEnd();
-                int start;
-                if (TextUtils.isEmpty(getHint())) {
-                    start = mTokenizer.findTokenStart(editable, end);
-                } else {
-                    start = getHint().length();
-                }
+                final int start=mTokenizer.findTokenStart(editable,end);
                 final DrawableRecipientChip[] chips=getSpannable().getSpans(start,end,DrawableRecipientChip.class);
-
-                if (!TextUtils.isEmpty(getHint())) {
-                    if (getHint().equals(getText().toString())) {
-                        return;
-                    }
-                }
-                if(chips==null||chips.length==0)
+                if(chips==null||chips.length==0&&start>=0)
                 {
                     final Editable text=getText();
+                    // TODO check why this code can crash (index out of bounds). Currently fixed by checking that
+                    // start>=0
                     int whatEnd=mTokenizer.findTokenEnd(text,start);
                     // This token was already tokenized, so skip past the ending token.
                     if(whatEnd<text.length()&&text.charAt(whatEnd)==',')
@@ -1165,15 +1127,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             return false;
         final Editable editable=getText();
         final int end=getSelectionEnd();
-        int start;
-        if (getHint() == null) {
-            start = mTokenizer.findTokenStart(editable, end);
-        } else {
-            int hintLength = getHint().length();
-            String text = getText().toString();
-            String sub = getText().subSequence(hintLength, text.length()).toString();
-            start = sub.length();
-        }
+        final int start=mTokenizer.findTokenStart(editable,end);
         if(shouldCreateChip(start,end))
         {
             int whatEnd=mTokenizer.findTokenEnd(getText(),start);
@@ -1261,10 +1215,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             DrawableRecipientChip beforeLast=null;
             if(recips.length>1)
                 beforeLast=recips[recips.length-2];
-            int startLooking = 0;
-            if (!TextUtils.isEmpty(getHint())) {
-                startLooking = getHint().length();
-            }
+            int startLooking=0;
             final int end=getSpannable().getSpanStart(last);
             if(beforeLast!=null)
             {
@@ -1355,7 +1306,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
     }
 
     // Visible for testing.
-  /* package */public Spannable getSpannable()
+  /* package */Spannable getSpannable()
     {
         return getText();
     }
@@ -1691,14 +1642,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             return;
         clearComposingText();
         final int end=getSelectionEnd();
-        int start;
-        if (getHint() != null && position == 0) {
-            start = getHint().length();
-        } else {
-            start = mTokenizer.findTokenStart(getText(), end);
-        }
-
-
+        final int start=mTokenizer.findTokenStart(getText(),end);
         final Editable editable=getText();
         QwertyKeyListener.markAsReplaced(editable,start,end,"");
         final CharSequence chip=createChip(entry,false);
@@ -1749,7 +1693,7 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
     }
 
     // Visible for testing.
-  /* package */public DrawableRecipientChip[] getSortedRecipients()
+  /* package */DrawableRecipientChip[] getSortedRecipients()
     {
         final DrawableRecipientChip[] recips=getSpannable().getSpans(0,getText().length(),DrawableRecipientChip.class);
         final ArrayList<DrawableRecipientChip> recipientsList=new ArrayList<DrawableRecipientChip>(Arrays.asList(recips));
@@ -2504,16 +2448,9 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
     // ///////////////////////
     private class RecipientTextWatcher implements TextWatcher
     {
-        private int mStart, mAfter, mCount;
-
         @Override
         public void afterTextChanged(final Editable s)
         {
-
-            if (!TextUtils.isEmpty(getHint())) {
-                keepPermanentHint(mHint, s);
-            }
-
             // If the text has been set to null or empty, make sure we remove
             // all the spans we applied.
             if(TextUtils.isEmpty(s))
@@ -2568,52 +2505,6 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
                             commitByCharacter();
                     }
             }
-
-
-        }
-
-        private void keepPermanentHint(String hint, Editable e) {
-
-            // If the user tries to go into our hint
-            if (mStart < hint.length()) {
-
-                // Check to see if the hint is still ok
-                if (e.toString().startsWith(hint)) {
-                    return;
-
-                    // If first chip is created it clears the edit text. Simply put the hint back in
-                } else if (e.toString().equals("")) {
-                    setText(mHint);
-                    return;
-
-                    // If the user is backspacing in our hint
-                } else if (mCount >= 1 && mAfter == 0) {
-
-                    // If deleting somewhere in the hint. Ex: T|o
-                    if (mStart + mCount +1 <= hint.length()) {
-                        e.replace(mStart, mStart + mCount, hint.substring(mStart, mStart + mCount + 1));
-
-                        // If backspacing from the end of the hint. Ex: To|
-                    } else {
-                        e.replace(mStart, mStart, hint.substring(mStart, mStart+1));
-                    }
-
-                    // If the user is typing in our hint then we delete everything they typed
-                } else if (mCount == 0 && mAfter >= 1) {
-                    e.delete(mStart, mStart + mAfter);
-                }
-
-                // Keep hint color
-                int color = getResources().getColor(R.color.dark_grey);
-                e.setSpan(new ForegroundColorSpan(color), 0, hint.length()-1, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
-
-                // Handles the backspace when
-                setSelection(hint.length(), hint.length());
-
-                // Change the text color to normal since user is typing past the hint
-            } else {
-                e.setSpan(new ForegroundColorSpan(Color.BLACK), mStart, mStart + mAfter, Spanned.SPAN_INCLUSIVE_INCLUSIVE);
-            }
         }
 
         @Override
@@ -2666,9 +2557,6 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             // final DrawableRecipientChip[] chips = getSpannable().getSpans(0, getText().length(),
             // DrawableRecipientChip.class);
             // previousChipsCount = chips.length;
-            mStart = start;
-            mCount = count;
-            mAfter = after;
         }
     }
 
@@ -2967,5 +2855,4 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
         mFocusBehavior.clear();
         mFocusBehavior.addAll(focusBehavior);
     }
-
 }
