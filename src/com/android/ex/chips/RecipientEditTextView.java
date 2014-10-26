@@ -2824,6 +2824,12 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
             final RecipientEntry recipientEntry=chip.getEntry();
             result.add(recipientEntry);
         }
+		if (mRemovedSpans != null) {
+            for (DrawableRecipientChip chip : mRemovedSpans) {
+                final RecipientEntry recipientEntry=chip.getEntry();
+                result.add(recipientEntry);
+            }
+        }
         return result;
     }
 
