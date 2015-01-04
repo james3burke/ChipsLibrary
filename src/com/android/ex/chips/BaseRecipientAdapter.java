@@ -154,6 +154,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
             this.isGalContact=isGalContact;
         }
 
+
         public TemporaryEntry(final Cursor cursor,final boolean isGalContact)
         {
             displayName=cursor.getString(Queries.Query.NAME);
@@ -164,6 +165,20 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
             dataId=cursor.getLong(Queries.Query.DATA_ID);
             thumbnailUriString=cursor.getString(Queries.Query.PHOTO_THUMBNAIL_URI);
             displayNameSource=cursor.getInt(Queries.Query.DISPLAY_NAME_SOURCE);
+            this.isGalContact=isGalContact;
+        }
+		
+		public TemporaryEntry(final Cursor cursor,final boolean isGalContact, boolean isGroup)
+        {
+            displayName=cursor.getString(0);
+            contactId=cursor.getLong(1);
+
+            this.destination=null;
+            this.destinationType=0;
+            this.destinationLabel=null;
+            this.dataId=0;
+            this.thumbnailUriString=null;
+            this.displayNameSource=0;
             this.isGalContact=isGalContact;
         }
     }
@@ -201,6 +216,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
                 Log.d(TAG,"start filtering. constraint: "+constraint+", thread:"+Thread.currentThread());
             final FilterResults results=new FilterResults();
             Cursor defaultDirectoryCursor=null;
+            Cursor groupCursor = null;
             Cursor directoryCursor=null;
             if(TextUtils.isEmpty(constraint))
             {
@@ -224,7 +240,8 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
             try
             {
                 defaultDirectoryCursor=doQuery(constraint,mPreferredMaxResultCount,null);
-                if(defaultDirectoryCursor==null)
+                groupCursor = doGroupCursor(constraint);
+                if((defaultDirectoryCursor==null) && (groupCursor== null))
                 {
                     if(DEBUG)
                         Log.w(TAG,"null cursor returned for default Email filter query.");
@@ -237,10 +254,18 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
                     final LinkedHashMap<Long,List<RecipientEntry>> entryMap=new LinkedHashMap<Long,List<RecipientEntry>>();
                     final List<RecipientEntry> nonAggregatedEntries=new ArrayList<RecipientEntry>();
                     final Set<String> existingDestinations=new HashSet<String>();
-                    while(defaultDirectoryCursor.moveToNext())
-                        // Note: At this point each entry doesn't contain any photo
-                        // (thus getPhotoBytes() returns null).
-                        putOneEntry(new TemporaryEntry(defaultDirectoryCursor,false /* isGalContact */),true,entryMap,nonAggregatedEntries,existingDestinations);
+                    if (defaultDirectoryCursor != null) {
+                        while (defaultDirectoryCursor.moveToNext())
+                            // Note: At this point each entry doesn't contain any photo
+                            // (thus getPhotoBytes() returns null).
+                            putOneEntry(new TemporaryEntry(defaultDirectoryCursor, false /* isGalContact */), true, entryMap, nonAggregatedEntries, existingDestinations);
+                    }
+                    if (groupCursor != null) {
+                        while (groupCursor.moveToNext()) {
+                            TemporaryEntry temp = new TemporaryEntry(groupCursor, false, true);
+                            putOneGroupEntry(temp, true, entryMap, nonAggregatedEntries, existingDestinations);
+                        }
+                    }
                     // We'll copy this result to mEntry in publicResults() (run in the UX thread).
                     final List<RecipientEntry> entries=constructEntryList(entryMap,nonAggregatedEntries);
                     // After having local results, check the size of results. If the results are
@@ -274,6 +299,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
             return results;
         }
 
+
         @Override
         protected void publishResults(final CharSequence constraint,final FilterResults results)
         {
@@ -302,6 +328,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
             }
         }
 
+
         @Override
         public CharSequence convertResultToString(final Object resultValue)
         {
@@ -327,6 +354,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
             mParams=params;
         }
 
+
         public synchronized void setLimit(final int limit)
         {
             mLimit=limit;
@@ -336,6 +364,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
         {
             return mLimit;
         }
+
 
         @Override
         protected FilterResults performFiltering(final CharSequence constraint)
@@ -374,6 +403,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
                 Log.v(TAG,"finished loading directory \""+mParams.displayName+"\""+" with query "+constraint);
             return results;
         }
+
 
         @Override
         protected void publishResults(final CharSequence constraint,final FilterResults results)
@@ -455,10 +485,12 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
                 updateEntries(constructEntryList(mEntryMap,mNonAggregatedEntries));
         }
 
+
         public void sendDelayedLoadMessage()
         {
             sendMessageDelayed(obtainMessage(MESSAGE_SEARCH_PENDING,0,0,null),MESSAGE_SEARCH_PENDING_DELAY);
         }
+
 
         public void removeDelayedLoadMessage()
         {
@@ -629,6 +661,10 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
         mDelayedMessageHandler.sendDelayedLoadMessage();
     }
 
+    private static void putOneGroupEntry(final TemporaryEntry entry,final boolean isAggregatedEntry,final LinkedHashMap<Long,List<RecipientEntry>> entryMap,final List<RecipientEntry> nonAggregatedEntries,final Set<String> existingDestinations) {
+        nonAggregatedEntries.add(RecipientEntry.constructGroupEntry(entry.displayName, entry.contactId));
+    }	
+	
     private static void putOneEntry(final TemporaryEntry entry,final boolean isAggregatedEntry,final LinkedHashMap<Long,List<RecipientEntry>> entryMap,final List<RecipientEntry> nonAggregatedEntries,final Set<String> existingDestinations)
     {
         if(existingDestinations.contains(entry.destination))
@@ -792,6 +828,7 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
                 return null;
             }
 
+
             @Override
             protected void onPostExecute(final byte[] photoBytes)
             {
@@ -890,6 +927,27 @@ public abstract class BaseRecipientAdapter extends BaseAdapter implements Filter
         return cursor;
     }
 
+	private final String[] GROUP_PROJECTION = new String[] {ContactsContract.Groups.TITLE,
+            ContactsContract.Groups._ID};
+
+    protected Cursor doGroupCursor(CharSequence constraint) {
+
+        String query = ContactsContract.Groups.TITLE + " like ? and " +
+                ContactsContract.Groups.GROUP_VISIBLE + "=0 and " +
+                ContactsContract.Groups.DELETED + "=0";
+
+        String[] selectionArguments = new String[] {constraint.toString() + "%"};
+        String sortOrder = null;
+
+        final Cursor cursor=mContentResolver.query(ContactsContract.Groups.CONTENT_URI,
+                GROUP_PROJECTION,
+                query,
+                selectionArguments,
+                sortOrder);
+
+        return cursor;
+    }
+	
     // TODO: This won't be used at all. We should find better way to quit the thread..
   /*
    * public void close() { mEntries = null; mPhotoCacheMap.evictAll(); if (!sPhotoHandlerThread.quit()) { Log.w(TAG,

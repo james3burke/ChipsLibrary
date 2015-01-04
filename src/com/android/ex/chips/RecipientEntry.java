@@ -37,6 +37,7 @@ public class RecipientEntry implements Parcelable
 /* package */static final int INVALID_DESTINATION_TYPE =-1;
 public static final int       ENTRY_TYPE_PERSON        =0;
 public static final int       ENTRY_TYPE_SIZE          =1;
+public static final int       ENTRY_TYPE_GROUP         =2;
 private final int             mEntryType;
 /**
  * True when this entry is the first entry in a group, which should have a photo and display name, while the second
@@ -148,6 +149,11 @@ public static RecipientEntry constructSecondLevelEntry(final String displayName,
   return new RecipientEntry(ENTRY_TYPE_PERSON,pickDisplayName(displayNameSource,displayName,destination),destination,destinationType,destinationLabel,contactId,dataId,thumbnailUriAsString!=null ? Uri.parse(thumbnailUriAsString) : null,false,isValid,isGalContact);
   }
 
+public static RecipientEntry constructGroupEntry(final String groupName, Long groupId) {
+    boolean isValid = true;
+    return new RecipientEntry(ENTRY_TYPE_GROUP,groupName,null,INVALID_DESTINATION_TYPE,null,groupId,GENERATED_CONTACT,null,true,isValid,false /* isGalContact */);
+}  
+  
 @Override
 public int hashCode()
   {
@@ -225,7 +231,7 @@ public boolean isSeparator()
 
 public boolean isSelectable()
   {
-  return mEntryType==ENTRY_TYPE_PERSON;
+  return (mEntryType==ENTRY_TYPE_PERSON) || (mEntryType==ENTRY_TYPE_GROUP);
   }
 
 public boolean isGalContact()
