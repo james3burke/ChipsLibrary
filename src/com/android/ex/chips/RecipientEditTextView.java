@@ -38,6 +38,7 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnDismissListener;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -52,6 +53,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Parcelable;
+import android.provider.ContactsContract;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.Layout;
@@ -1635,9 +1637,42 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
         return chipText;
     }
 
-    private void submitItemAtPosition(final int position)
+    private void submitItemAtPosition(final int position) {
+        final RecipientEntry entry=getAdapter().getItem(position);
+        if (entry.getEntryType() == RecipientEntry.ENTRY_TYPE_GROUP) {
+            Log.d("RETV", "attempt to add group " + entry.getDisplayName());
+            List<RecipientEntry> groupRecipients = getRecipientsForGroup(entry.getContactId());
+            if ((groupRecipients != null) && (!groupRecipients.isEmpty())) {
+                submitChipsAtPosition(groupRecipients);
+            }
+        } else {
+            submitSingleItemAtPosition(createValidatedEntry(entry));
+        }
+    }
+
+    private void submitChipsAtPosition(List<RecipientEntry> entries) {
+        clearComposingText();
+        final int end=getSelectionEnd();
+        final int start=mTokenizer.findTokenStart(getText(),end);
+        final Editable editable=getText();
+        QwertyKeyListener.markAsReplaced(editable,start,end,"");
+        int count = 0;
+        for (RecipientEntry re : entries) {
+            CharSequence chip = createChip(re, false);
+            if (count == 0) {
+                editable.replace(start, end, chip);
+            } else {
+                editable.insert(start, chip);
+            }
+            count++;
+        }
+        sanitizeBetween();
+        if(mChipListener!=null)
+            mChipListener.onDataChanged();
+    }
+
+    private void submitSingleItemAtPosition(RecipientEntry entry)
     {
-        final RecipientEntry entry=createValidatedEntry(getAdapter().getItem(position));
         if(entry==null)
             return;
         clearComposingText();
@@ -1651,6 +1686,73 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
         sanitizeBetween();
         if(mChipListener!=null)
             mChipListener.onDataChanged();
+    }
+
+    private List<RecipientEntry> getRecipientsForGroup(Long groupId) {
+
+        List<RecipientEntry> results = new ArrayList<RecipientEntry>();
+
+        String[] cProjection = { ContactsContract.Contacts.DISPLAY_NAME, ContactsContract.CommonDataKinds.GroupMembership.CONTACT_ID, ContactsContract.CommonDataKinds.Email.ADDRESS };
+
+        Cursor groupCursor = getContext().getContentResolver().query(
+                ContactsContract.Data.CONTENT_URI,
+                cProjection,
+                ContactsContract.CommonDataKinds.GroupMembership.GROUP_ROW_ID + "= ?" + " AND "
+                        + ContactsContract.CommonDataKinds.GroupMembership.MIMETYPE + "='"
+                        + ContactsContract.CommonDataKinds.GroupMembership.CONTENT_ITEM_TYPE + "'",
+                new String[]{String.valueOf(groupId)}, null);
+        if (groupCursor != null) {
+            groupCursor.moveToFirst();
+            while (!groupCursor.isAfterLast()) {
+                int dnPos = groupCursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME);
+                int ciPos = groupCursor.getColumnIndex(ContactsContract.CommonDataKinds.GroupMembership.CONTACT_ID);
+                int eaPos = groupCursor.getColumnIndex(ContactsContract.CommonDataKinds.Email.ADDRESS);
+                String displayName = groupCursor.getString(dnPos);
+                Long contactId = groupCursor.getLong(ciPos);
+                String email = groupCursor.getString(eaPos);
+
+                RecipientEntry contact = loadContact(contactId, displayName);
+                if (contact != null) {
+                    results.add(contact);
+                }
+
+                groupCursor.moveToNext();
+            }
+            groupCursor.close();
+        }
+        return results;
+    }
+
+    private RecipientEntry loadContact(Long contactId, String displayName) {
+        RecipientEntry result = null;
+
+        // ContactsContract.Contacts._ID + "=? and " +
+        String query = ContactsContract.CommonDataKinds.Email.CONTACT_ID + "=?";
+
+        final Cursor cursor=getContext().getContentResolver().query(Queries.EMAIL.getContentUri(),
+                Queries.EMAIL.getProjection(),
+                query,
+                new String[]{"" + contactId},
+                null);
+
+        if (cursor != null) {
+            int count = 0;
+            cursor.moveToFirst();
+            while (!cursor.isAfterLast()) {
+                BaseRecipientAdapter.TemporaryEntry entry = new BaseRecipientAdapter.TemporaryEntry(cursor, false);
+                if (displayName == null) {
+                    displayName = entry.displayName;
+                }
+                if (count == 0) {
+                    result = RecipientEntry.constructTopLevelEntry(displayName, entry.displayNameSource, entry.destination, entry.destinationType, entry.destinationLabel, entry.contactId, entry.dataId, entry.thumbnailUriString, true, entry.isGalContact);
+                }
+                count++;
+                cursor.moveToNext();
+            }
+            cursor.close();
+        }
+
+        return result;
     }
 
     private RecipientEntry createValidatedEntry(final RecipientEntry item)
