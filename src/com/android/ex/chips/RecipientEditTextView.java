@@ -1743,8 +1743,12 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
                 if (displayName == null) {
                     displayName = entry.displayName;
                 }
+				boolean isValid = false;
+                if ((entry.destination != null) && (!entry.destination.trim().equals(""))) {
+                    isValid = isValidEmail(entry.destination);
+                }
                 if (count == 0) {
-                    result = RecipientEntry.constructTopLevelEntry(displayName, entry.displayNameSource, entry.destination, entry.destinationType, entry.destinationLabel, entry.contactId, entry.dataId, entry.thumbnailUriString, true, entry.isGalContact);
+                    result = RecipientEntry.constructTopLevelEntry(displayName, entry.displayNameSource, entry.destination, entry.destinationType, entry.destinationLabel, entry.contactId, entry.dataId, entry.thumbnailUriString, isValid, entry.isGalContact);
                 }
                 count++;
                 cursor.moveToNext();
@@ -1755,6 +1759,13 @@ public class RecipientEditTextView extends MultiAutoCompleteTextView implements 
         return result;
     }
 
+	private boolean isValidEmail(String email) {
+        if (email.matches("[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}$")) {
+            return true;
+        }
+        return false;
+    }
+	
     private RecipientEntry createValidatedEntry(final RecipientEntry item)
     {
         if(item==null)
