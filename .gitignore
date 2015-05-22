@@ -1,44 +1,51 @@
-# Android generated
+# svn
+*.svn*
+
+# built application files
+*.apk
+*.ap_
+
+# files for the dex VM
+*.dex
+
+# Java class files
+*.class
+
+# generated GUI files
+*/R.java
+
+# generated folder
 bin
 gen
-lint.xml
 
-# Eclipse
-.project
-.classpath
-.settings
-.checkstyle
-
-# IntelliJ IDEA
-.idea
-*.iml
-*.ipr
-*.iws
-classes
-gen-external-apklibs
-
-# Maven
-target
-release.properties
-pom.xml.*
-
-# Ant
-ant.properties
+# local
 local.properties
 proguard.cfg
-proguard-project.txt
 
-# Other
-.DS_Store
-dist/
-tmp
-path
+# log files
+log*.txt
 
-# Gradle
+# archives
+*.gz
+*.tar
+*.zip
+
+# eclipse
+*.metadata
+*.settings
+
+# Android Studio
+.idea/*
+**/*/.idea
+!.idea/codeStyleSettings.xml
 .gradle
-/build
-/out
+*/local.properties
+*/out
+build
+*.iml
+*.iws
+*.ipr
+*~
+*.swp
 
-# Crashlytics
-crashlytics-build.properties
-com_crashlytics_export_strings.xml
+.DS_Store

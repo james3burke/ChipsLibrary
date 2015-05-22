@@ -20,16 +20,17 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 
 /**
- * RecipientChip defines a drawable object that contains information relevant to a particular recipient.
+ * RecipientChip defines a drawable object that contains information relevant to a particular
+ * recipient.
  */
 public interface DrawableRecipientChip extends BaseRecipientChip {
-	/**
-	 * Get the bounds of the chip; may be 0,0 if it is not visibly rendered.
-	 */
-	Rect getBounds();
+  /**
+   * Get the bounds of the chip; may be 0,0 if it is not visibly rendered.
+   */
+  Rect getBounds();
 
-	/**
-	 * Draw the chip.
-	 */
-	void draw(Canvas canvas);
+  /**
+   * Draw the chip.
+   */
+  void draw(Canvas canvas);
 }
